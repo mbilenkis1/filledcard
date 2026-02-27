@@ -1,0 +1,280 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PartnerStatus {
+  HAS_PARTNER
+  LOOKING
+  OPEN_TO_INQUIRIES
+}
+
+enum PartnerStatusVisibility {
+  PUBLIC
+  MEMBERS_ONLY
+}
+
+enum PartnershipType {
+  AMATEUR_AMATEUR
+  PRO_AM
+  PRACTICE_ONLY
+}
+
+enum CompetitionFrequency {
+  RARELY
+  ONE_TO_THREE
+  FOUR_TO_SIX
+  SEVEN_PLUS
+}
+
+enum BudgetRange {
+  BUDGET
+  MODERATE
+  COMPETITIVE
+  UNLIMITED
+}
+
+enum TravelWillingness {
+  LOCAL_ONLY
+  REGIONAL
+  NATIONAL
+  INTERNATIONAL
+}
+
+enum DanceStyleEnum {
+  WALTZ
+  TANGO
+  FOXTROT
+  VIENNESE_WALTZ
+  QUICKSTEP
+  CHA_CHA
+  SAMBA
+  RUMBA
+  PASO_DOBLE
+  JIVE
+  BOLERO
+  MAMBO
+  WEST_COAST_SWING
+}
+
+enum DanceCategory {
+  SMOOTH
+  STANDARD
+  RHYTHM
+  LATIN
+}
+
+enum DanceLevel {
+  NEWCOMER
+  BRONZE
+  SILVER
+  GOLD
+  NOVICE
+  PRE_CHAMP
+  CHAMPIONSHIP
+}
+
+enum CompetitionResultSource {
+  NDCA
+  O2CM
+  MANUAL
+}
+
+enum VideoPlatform {
+  YOUTUBE
+  INSTAGRAM
+  OTHER
+}
+
+enum PartnerRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Dancer {
+  id            String   @id @default(cuid())
+  clerkUserId   String?  @unique
+  email         String   @unique
+  firstName     String
+  lastName      String
+  displayName   String?
+
+  profilePhoto  String?
+  coverVideo    String?
+
+  heightInches  Int?
+  birthYear     Int?
+
+  city          String?
+  state         String?
+  country       String?  @default("US")
+
+  bio           String?  @db.Text
+
+  studioName    String?
+  coachName     String?
+
+  instagramHandle String?
+  youtubeHandle   String?
+
+  partnerStatus             PartnerStatus           @default(OPEN_TO_INQUIRIES)
+  partnerStatusVisibility   PartnerStatusVisibility @default(PUBLIC)
+  partnershipType           PartnershipType[]
+
+  competitionFrequency  CompetitionFrequency?
+  budgetRange           BudgetRange?
+
+  ndcaId        String?
+
+  isClaimed     Boolean  @default(false)
+  isTeacher     Boolean  @default(false)
+  teacherVerified Boolean @default(false)
+  openToProAm   Boolean  @default(false)
+
+  teacherBio    String?  @db.Text
+  studioAddress String?
+  studioCity    String?
+  studioState   String?
+
+  lessonRates   Json?
+
+  travelWillingness TravelWillingness?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  danceStyles       DanceStyle[]
+  competitionResults CompetitionResult[]
+  videos            Video[]
+
+  sentMessages      Message[]         @relation("SentMessages")
+  receivedMessages  Message[]         @relation("ReceivedMessages")
+
+  sentRequests      PartnerRequest[]  @relation("SentRequests")
+  receivedRequests  PartnerRequest[]  @relation("ReceivedRequests")
+
+  reviewsGiven      TeacherReview[]   @relation("ReviewsGiven")
+  reviewsReceived   TeacherReview[]   @relation("ReviewsReceived")
+
+  @@index([partnerStatus])
+  @@index([isTeacher])
+  @@index([isClaimed])
+  @@index([state])
+}
+
+model DanceStyle {
+  id        String        @id @default(cuid())
+  dancerId  String
+  dancer    Dancer        @relation(fields: [dancerId], references: [id], onDelete: Cascade)
+
+  style     DanceStyleEnum
+  category  DanceCategory
+  level     DanceLevel
+  isCompeting    Boolean  @default(false)
+  wantsToCompete Boolean  @default(false)
+
+  @@unique([dancerId, style])
+  @@index([dancerId])
+}
+
+model CompetitionResult {
+  id              String   @id @default(cuid())
+  dancerId        String
+  dancer          Dancer   @relation(fields: [dancerId], references: [id], onDelete: Cascade)
+
+  competitionName String
+  competitionDate DateTime
+
+  location        String?
+  partnerName     String?
+
+  style           String
+  level           String
+  placement       Int?
+  totalCompetitors Int?
+
+  source          CompetitionResultSource @default(MANUAL)
+  externalId      String?
+
+  createdAt       DateTime @default(now())
+
+  @@unique([externalId, source])
+  @@index([dancerId])
+  @@index([competitionDate])
+}
+
+model Video {
+  id           String        @id @default(cuid())
+  dancerId     String
+  dancer       Dancer        @relation(fields: [dancerId], references: [id], onDelete: Cascade)
+
+  url          String
+  thumbnailUrl String?
+  title        String?
+
+  platform     VideoPlatform @default(YOUTUBE)
+  isVerified   Boolean       @default(false)
+
+  addedAt      DateTime      @default(now())
+
+  @@index([dancerId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     Dancer   @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   Dancer   @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  content    String   @db.Text
+  isRead     Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+model PartnerRequest {
+  id           String               @id @default(cuid())
+  fromDancerId String
+  fromDancer   Dancer               @relation("SentRequests", fields: [fromDancerId], references: [id])
+  toDancerId   String
+  toDancer     Dancer               @relation("ReceivedRequests", fields: [toDancerId], references: [id])
+
+  message      String?              @db.Text
+  status       PartnerRequestStatus @default(PENDING)
+
+  createdAt    DateTime             @default(now())
+
+  @@index([fromDancerId])
+  @@index([toDancerId])
+}
+
+model TeacherReview {
+  id         String   @id @default(cuid())
+  teacherId  String
+  teacher    Dancer   @relation("ReviewsReceived", fields: [teacherId], references: [id])
+  reviewerId String
+  reviewer   Dancer   @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+
+  rating     Int
+  body       String   @db.Text
+  isVerified Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([teacherId, reviewerId])
+  @@index([teacherId])
+}
