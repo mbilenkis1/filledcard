@@ -1,6 +1,6 @@
 import { Dancer, DanceStyle } from '@prisma/client'
 
-type DancerWithStyles = Dancer & { danceStyles: DanceStyle[] }
+type DancerWithStyles = Dancer & { danceStyles: DanceStyle[]; lat?: number | null; lon?: number | null }
 
 export interface MatchResult {
   score: number
@@ -50,15 +50,29 @@ function partnershipOverlap(p1: string[], p2: string[]): number {
   return overlap > 0 ? 5 : 0
 }
 
-// Simplified geographic score (no actual distance calc without geocoding)
+function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3958.8 // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function geoScore(d1: DancerWithStyles, d2: DancerWithStyles): { score: number; reason: string } {
+  // Use precise distance when both have coordinates
+  if (d1.lat && d1.lon && d2.lat && d2.lon) {
+    const miles = Math.round(haversineMiles(d1.lat, d1.lon, d2.lat, d2.lon))
+    if (miles < 50)  return { score: 20, reason: `${miles} miles apart` }
+    if (miles < 150) return { score: 10, reason: `${miles} miles apart` }
+    return { score: 0, reason: `${miles} miles apart` }
+  }
+  // Fallback to state matching
   if (!d1.state || !d2.state) return { score: 5, reason: 'Location not specified' }
-  if (d1.city && d2.city && d1.city === d2.city) {
-    return { score: 20, reason: `Both in ${d1.city}` }
-  }
-  if (d1.state === d2.state) {
-    return { score: 15, reason: `Both in ${d1.state}` }
-  }
+  if (d1.city && d2.city && d1.city === d2.city) return { score: 20, reason: `Both in ${d1.city}` }
+  if (d1.state === d2.state) return { score: 10, reason: `Both in ${d1.state}` }
   return { score: 0, reason: 'Different states' }
 }
 

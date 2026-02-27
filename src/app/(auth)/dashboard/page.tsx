@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { calculateMatchScore } from '@/lib/matching'
 import { formatLocation } from '@/lib/utils'
+import { PartnerRequestCard } from '@/components/dashboard/PartnerRequestCard'
 import { MessageCircle, Heart, Trophy, Bell, ChevronRight, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -181,21 +182,21 @@ export default async function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {partnerRequests.map(req => (
-                    <div key={req.id} className="flex items-start gap-3">
-                      <Avatar
-                        src={req.fromDancer.profilePhoto}
-                        firstName={req.fromDancer.firstName}
-                        lastName={req.fromDancer.lastName}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#0F172A] font-medium truncate">
-                          {req.fromDancer.firstName} {req.fromDancer.lastName}
-                        </p>
-                        <p className="text-xs text-slate-500">Partner request</p>
-                      </div>
-                      <span className="text-xs text-[#D4AF37] font-semibold">New</span>
-                    </div>
+                    <PartnerRequestCard
+                      key={req.id}
+                      request={{
+                        id: req.id,
+                        message: req.message,
+                        createdAt: req.createdAt.toISOString(),
+                        fromDancer: {
+                          id: req.fromDancer.id,
+                          firstName: req.fromDancer.firstName,
+                          lastName: req.fromDancer.lastName,
+                          displayName: req.fromDancer.displayName,
+                          profilePhoto: req.fromDancer.profilePhoto,
+                        },
+                      }}
+                    />
                   ))}
                   {recentMessages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3">

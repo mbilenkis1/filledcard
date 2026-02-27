@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { MapPin } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { StyleBadge } from './StyleBadge'
@@ -24,7 +27,11 @@ export function DancerCard({ dancer, matchScore, matchReasons, showMatchScore }:
 
   return (
     <Link href={`/dancer/${dancer.id}`} className="block group">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+      <motion.div
+        className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+        whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(15,23,42,0.10)' }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+      >
         {/* Photo area */}
         <div className="relative h-48 bg-gradient-to-br from-[#0F172A] to-[#1e293b]">
           {dancer.profilePhoto ? (
@@ -111,7 +118,7 @@ export function DancerCard({ dancer, matchScore, matchReasons, showMatchScore }:
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </Link>
   )
 }

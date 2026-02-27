@@ -99,6 +99,13 @@ enum PartnerRequestStatus {
   DECLINED
 }
 
+enum TryoutStatus {
+  PROPOSED
+  CONFIRMED
+  RESCHEDULE_REQUESTED
+  CANCELED
+}
+
 model Dancer {
   id            String   @id @default(cuid())
   clerkUserId   String?  @unique
@@ -116,6 +123,8 @@ model Dancer {
   city          String?
   state         String?
   country       String?  @default("US")
+  lat           Float?
+  lon           Float?
 
   bio           String?  @db.Text
 
@@ -164,6 +173,15 @@ model Dancer {
 
   reviewsGiven      TeacherReview[]   @relation("ReviewsGiven")
   reviewsReceived   TeacherReview[]   @relation("ReviewsReceived")
+
+  tryoutsAsRequester Tryout[]         @relation("TryoutRequester")
+  tryoutsAsRecipient Tryout[]         @relation("TryoutRecipient")
+  tryoutsProposed    Tryout[]         @relation("TryoutProposer")
+
+  blocks            Block[]           @relation("Blocks")
+  blockedBy         Block[]           @relation("BlockedBy")
+  reports           Report[]          @relation("Reports")
+  reportedBy        Report[]          @relation("ReportedBy")
 
   @@index([partnerStatus])
   @@index([isTeacher])
@@ -277,4 +295,57 @@ model TeacherReview {
 
   @@unique([teacherId, reviewerId])
   @@index([teacherId])
+}
+
+model Tryout {
+  id           String       @id @default(cuid())
+
+  requesterId  String
+  requester    Dancer       @relation("TryoutRequester", fields: [requesterId], references: [id])
+
+  recipientId  String
+  recipient    Dancer       @relation("TryoutRecipient", fields: [recipientId], references: [id])
+
+  proposedById String
+  proposedBy   Dancer       @relation("TryoutProposer", fields: [proposedById], references: [id])
+
+  datetime     DateTime
+  locationText String
+  notes        String?      @db.Text
+
+  status       TryoutStatus @default(PROPOSED)
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([requesterId])
+  @@index([recipientId])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   Dancer   @relation("Blocks", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   Dancer   @relation("BlockedBy", fields: [blockedId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reporter   Dancer   @relation("Reports", fields: [reporterId], references: [id])
+  reportedId String
+  reported   Dancer   @relation("ReportedBy", fields: [reportedId], references: [id])
+
+  reason     String
+  notes      String?  @db.Text
+
+  createdAt  DateTime @default(now())
+
+  @@index([reportedId])
 }
